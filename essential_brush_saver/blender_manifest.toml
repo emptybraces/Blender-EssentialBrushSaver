@@ -1,0 +1,32 @@
+schema_version = "1.0.0"
+
+id = "essential_brush_saver"
+version = "1.0.0"
+name = "Essential Brush Saver"
+tagline = "Save and load settings of essential brushes such as size and strength"
+maintainer = "emptybraces <motose6@gmail.com>"
+type = "add-on"
+
+# Optional link to documentation, support, source files, etc
+website = "https://emptybraces.github.io"
+
+# Optional list defined by Blender and server, see:
+# https://docs.blender.org/manual/en/dev/advanced/extensions/tags.html
+tags = ["Paint", "Sculpt", "System"]
+
+blender_version_min = "4.3.0"
+## Optional: Blender version that the extension does not support, earlier versions are supported.
+## This can be omitted and defined later on the extensions platform if an issue is found.
+# blender_version_max = "5.1.0"
+
+license = [
+  "SPDX:GPL-3.0-or-later",
+]
+
+# [permissions]
+# 
+
+
+# ---------------------------
+# v1.0.0
+# - First release.

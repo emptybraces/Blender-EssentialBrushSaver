@@ -1,0 +1,1 @@
+powershell compress-archive -Force essential_brush_saver essential_brush_saver.zip
