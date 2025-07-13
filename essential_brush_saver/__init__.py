@@ -7,6 +7,7 @@ modules = (
     "essential_brush_saver._preference",
     "essential_brush_saver._config",
     "essential_brush_saver._sculpt_brush",
+    "essential_brush_saver._vertex_brush",
     "essential_brush_saver._g",
 )
 for mod_name in modules:
@@ -14,7 +15,7 @@ for mod_name in modules:
         importlib.reload(sys.modules[mod_name])
     else:
         __import__(mod_name)
-from . import _config, _preference, _sculpt_brush, _g
+from . import _config, _preference, _g, _sculpt_brush, _vertex_brush
 # fmt:on
 
 bl_info = {
@@ -31,53 +32,48 @@ bl_info = {
 
 
 def load():
-    current_brush = bpy.context.tool_settings.sculpt.brush
-    config = _config.get_data()
-    sculpt_data = config.get("sculpt", {})
-    load_requests = [key for key in sculpt_data.keys() if bpy.data.brushes.get(key) is None]
-    if current_brush and current_brush.name in sculpt_data:
-        load_requests.append(current_brush.name)
-    # print(bpy.context.mode, current_brush, load_requests)
-    if load_requests:
+    def __load(module, data):
         # print("[Essential Brush Saver] The following warning logs are required to apply brush settings!")
-        for key in load_requests:
+        for key in data.keys():
             result = bpy.ops.brush.asset_activate(
                 asset_library_type="ESSENTIALS",
                 asset_library_identifier="",
-                relative_asset_identifier=os.path.join("brushes", "essentials_brushes-mesh_sculpt.blend", "Brush", key))
-            brush = bpy.data.brushes.get(key)
-            # print("load", key, result, brush)
+                relative_asset_identifier=os.path.join(module.relative_asset_path, key))
+            brush = next((b for b in bpy.data.brushes if b.name == key and module.is_mode_match(b)), None)
             if brush:
-                for attr in _sculpt_brush.attributes:
+                for attr in module.attributes:
                     if hasattr(brush, attr.split(".")[0]):
                         # print(key, attr, "has attribute, ", sculpt_data[key].get(attr, getattr_nested(brush, attr)))
-                        setattr_nested(brush, attr, sculpt_data[key].get(attr, getattr_nested(brush, attr)))
-                _g.print("[Essential Brush Saver] Brush param load:", key)
-    # for area in bpy.context.screen.areas:
-    #     if area.type == 'VIEW_3D':
-    #         area.tag_redraw()
+                        setattr_nested(brush, attr, data[key].get(attr, getattr_nested(brush, attr)))
+                _g.print("[Essential Brush Saver] load:", module.__name__.split(".")[-1], key, result)
+    config = _config.get_data()
+    __load(_sculpt_brush, config.get("sculpt", {}))
+    __load(_vertex_brush, config.get("vertex", {}))
 
 
 def save():
-    path = os.path.join(bpy.utils.system_resource("DATAFILES"), "assets", "brushes", "essentials_brushes-mesh_sculpt.blend")
-    brush_names = []
-    with bpy.data.libraries.load(path, link=False, assets_only=True) as (data_from, data_to):
-        brush_names = data_from.brushes[:]
-    is_save = False
-    for i in brush_names:
-        if brush := bpy.data.brushes.get(i):
-            is_save = True
-            config = _config.get_data()
-            brushes = config.setdefault("sculpt", {})
-            brush_data = brushes.setdefault(brush.name, {})
-            for attr in _sculpt_brush.attributes:
-                # if brush == "Paint Soft":
-                #     print(brush.name, attr, hasattr(brush, attr.split(".")[0]))
-                if hasattr(brush, attr.split(".")[0]):
-                    brush_data[attr] = getattr_nested(brush, attr)
-                    # print(attr, brush_data[attr])
-            _g.print("save: ", brush.name)
-    if is_save:
+    def __save(module, data):
+        brush_names = []
+        with bpy.data.libraries.load(module.abs_asset_path, link=False, assets_only=True) as (data_from, data_to):
+            brush_names = data_from.brushes[:]
+        r = False
+        for brush_name in brush_names:
+            brush = next((b for b in bpy.data.brushes if b.name == brush_name and module.is_mode_match(b)), None)
+            if brush:
+                r = True
+                brush_data = data.setdefault(brush.name, {})
+                for attr in module.attributes:
+                    if hasattr(brush, attr.split(".")[0]):
+                        brush_data[attr] = getattr_nested(brush, attr)
+                        # print(attr, brush_data[attr])
+                _g.print("[Essential Brush Saver] save: ", module.__name__.split(".")[-1], brush.name)
+        return r
+    r = False
+    config = _config.get_data()
+    r |= __save(_sculpt_brush, config.setdefault("sculpt", {}))
+    r |= __save(_vertex_brush, config.setdefault("vertex", {}))
+    print(r)
+    if r:
         _config.save()
 
 
@@ -139,7 +135,7 @@ def register():
     _preference.register()
     try:
         if not bpy.app.timers.is_registered(delay_start):
-            bpy.app.timers.register(delay_start, first_interval=0.5, persistent=True)
+            bpy.app.timers.register(delay_start, first_interval=1.0, persistent=True)
     except Exception as e:
         print(e)
 

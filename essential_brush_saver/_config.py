@@ -2,7 +2,7 @@ import bpy
 import os
 import json
 from mathutils import Vector, Color
-
+bpy.props.FloatProperty
 
 g_data = {}
 
@@ -31,7 +31,7 @@ def get_data():
 
 def save():
     def __encoder(obj):
-        if isinstance(obj, (Vector, Color)):
+        if isinstance(obj, (Vector, Color, bpy.types.bpy_prop_array)):
             return list(obj)
         return str(obj)
     try:
