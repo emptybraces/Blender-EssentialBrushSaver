@@ -1,7 +1,7 @@
 schema_version = "1.0.0"
 
 id = "essential_brush_saver"
-version = "1.0.0"
+version = "1.0.1"
 name = "Essential Brush Saver"
 tagline = "Automatically save and load essential brush settings"
 maintainer = "emptybraces <motose6@gmail.com>"
@@ -24,7 +24,7 @@ license = [
 ]
 
 # [permissions]
-# 
+files = "json file save/load to disk"
 
 
 # ---------------------------

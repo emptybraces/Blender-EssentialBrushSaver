@@ -27,7 +27,7 @@ bl_info = {
     "version": (1, 0, 0),
     "blender": (4, 5, 0),
     "location": "",
-    "description": "Save and load settings of essential brushes such as size and strength",
+    "description": "Automatically save and load essential brush settings",
     "warning": "",
     "doc_url": "",
     "category": "",
