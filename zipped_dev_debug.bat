@@ -1,1 +1,1 @@
-powershell compress-archive -Force reloader essential_brush_saver_debug
+powershell compress-archive -Force essential_brush_saver_reloader essential_brush_saver_reloader

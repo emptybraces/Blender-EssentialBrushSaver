@@ -1,5 +1,5 @@
 ﻿# バージョン番号が記載されたファイルのパス
-$versionFilePath = "my_best_pie_menu_ever\blender_manifest.toml"
+$versionFilePath = "essential_brush_saver\blender_manifest.toml"
 
 # ファイルの内容を行単位で読み込み
 $lines = Get-Content $versionFilePath
@@ -13,11 +13,10 @@ foreach ($line in $lines) {
         $version = $matches[1]
 
         # ZIPファイルの保存先およびファイル名を生成
-        $zipFileName = "my_best_pie_menu_ever-$version.zip"
+        $zipFileName = "essential_brush_saver-$version.zip"
 
         # 圧縮対象のフォルダー
-        $sourceFolder = "my_best_pie_menu_ever\*"
-        # $sourceFolder = "my_best_pie_menu_ever"
+        $sourceFolder = "essential_brush_saver\*"
 
         # 圧縮を実行
         Compress-Archive -Force -Path $sourceFolder -DestinationPath $zipFileName

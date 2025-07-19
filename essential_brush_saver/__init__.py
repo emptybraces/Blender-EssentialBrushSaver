@@ -1,24 +1,25 @@
-import sys
 import importlib
 import bpy
 import os
-# fmt:off
-modules = (
-    "essential_brush_saver._preference",
-    "essential_brush_saver._config",
-    "essential_brush_saver._b_sculpt",
-    "essential_brush_saver._b_vertex",
-    "essential_brush_saver._b_weight",
-    "essential_brush_saver._b_image",
-    "essential_brush_saver._g",
+from . import (
+    _preference,
+    _config,
+    _b_sculpt,
+    _b_vertex,
+    _b_weight,
+    _b_image,
+    _g,
 )
-for mod_name in modules:
-    if mod_name in sys.modules:
-        importlib.reload(sys.modules[mod_name])
-    else:
-        __import__(mod_name)
-from . import _b_sculpt, _b_vertex, _b_weight, _b_image, _config, _preference, _g
-# fmt:on
+for m in (
+    _preference,
+    _config,
+    _b_sculpt,
+    _b_vertex,
+    _b_weight,
+    _b_image,
+    _g,
+):
+    importlib.reload(m)
 
 bl_info = {
     "name": "Essential Brush Saver",
@@ -49,7 +50,7 @@ def load():
                     if hasattr(brush, attr.split(".")[0]):
                         # print(key, attr, "has attribute, ", sculpt_data[key].get(attr, getattr_nested(brush, attr)))
                         setattr_nested(brush, attr, data[key].get(attr, getattr_nested(brush, attr)))
-                _g.print("[Essential Brush Saver] load:", module.__name__.split(".")[-1], key, result)
+                _g.print("[Essential Brush Saver] Load:", module.__name__.split(".")[-1], key, result)
         return True
     config = _config.get_data()
     bpy.ops.object.mode_set(mode="SCULPT")
@@ -82,7 +83,7 @@ def save():
                     if hasattr(brush, attr.split(".")[0]):
                         brush_data[attr] = getattr_nested(brush, attr)
                         # print(attr, brush_data[attr])
-                _g.print("[Essential Brush Saver] save: ", module.__name__.split(".")[-1], brush.name)
+                _g.print("[Essential Brush Saver] Save: ", module.__name__.split(".")[-1], brush.name)
         return r
     r = False
     config = _config.get_data()
@@ -117,7 +118,9 @@ def saveload_procedure(procedure):
     # ダミーオブジェクト作成
     bpy.ops.mesh.primitive_cube_add(size=0.1, location=(0, 0, 0))
     temp_obj = bpy.context.active_object
-    temp_obj.name = "ESSENTIAL_BRUSH_SAVER_TEMP"
+    temp_is_cube = temp_obj and temp_obj.type == "MESH" and len(temp_obj.data.vertices) == 8
+    if temp_is_cube:
+        temp_obj.name = "ESSENTIAL_BRUSH_SAVER_TEMP"
 
     try:
         r = procedure()
@@ -128,7 +131,8 @@ def saveload_procedure(procedure):
             bpy.context.view_layer.objects.active = original_active
         if bpy.context.mode != original_mode:
             bpy.ops.object.mode_set(mode=original_mode)
-        bpy.data.objects.remove(temp_obj, do_unlink=True)
+        if temp_is_cube:
+            bpy.data.objects.remove(temp_obj, do_unlink=True)
         return r
 
 

@@ -3,7 +3,7 @@ schema_version = "1.0.0"
 id = "essential_brush_saver"
 version = "1.0.0"
 name = "Essential Brush Saver"
-tagline = "Save and load settings of essential brushes such as size and strength"
+tagline = "Automatically save and load essential brush settings"
 maintainer = "emptybraces <motose6@gmail.com>"
 type = "add-on"
 

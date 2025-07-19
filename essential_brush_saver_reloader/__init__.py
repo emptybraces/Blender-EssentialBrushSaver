@@ -1,6 +1,6 @@
 import bpy
 bl_info = {
-    "name": "Essential Brush Saver debug",
+    "name": "Essential Brush Saver reloader",
     "author": "emptybraces",
     "version": (1, 0, 0),
     "blender": (4, 3, 0),
