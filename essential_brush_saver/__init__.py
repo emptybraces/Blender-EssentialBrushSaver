@@ -6,8 +6,10 @@ import os
 modules = (
     "essential_brush_saver._preference",
     "essential_brush_saver._config",
-    "essential_brush_saver._sculpt_brush",
-    "essential_brush_saver._vertex_brush",
+    "essential_brush_saver._b_sculpt",
+    "essential_brush_saver._b_vertex",
+    "essential_brush_saver._b_weight",
+    "essential_brush_saver._b_image",
     "essential_brush_saver._g",
 )
 for mod_name in modules:
@@ -15,14 +17,14 @@ for mod_name in modules:
         importlib.reload(sys.modules[mod_name])
     else:
         __import__(mod_name)
-from . import _config, _preference, _g, _sculpt_brush, _vertex_brush
+from . import _b_sculpt, _b_vertex, _b_weight, _b_image, _config, _preference, _g
 # fmt:on
 
 bl_info = {
     "name": "Essential Brush Saver",
     "author": "emptybraces",
     "version": (1, 0, 0),
-    "blender": (4, 4, 0),
+    "blender": (4, 5, 0),
     "location": "",
     "description": "Save and load settings of essential brushes such as size and strength",
     "warning": "",
@@ -39,6 +41,8 @@ def load():
                 asset_library_type="ESSENTIALS",
                 asset_library_identifier="",
                 relative_asset_identifier=os.path.join(module.relative_asset_path, key))
+            if "CANCELLED" in result:
+                return False
             brush = next((b for b in bpy.data.brushes if b.name == key and module.is_mode_match(b)), None)
             if brush:
                 for attr in module.attributes:
@@ -46,9 +50,21 @@ def load():
                         # print(key, attr, "has attribute, ", sculpt_data[key].get(attr, getattr_nested(brush, attr)))
                         setattr_nested(brush, attr, data[key].get(attr, getattr_nested(brush, attr)))
                 _g.print("[Essential Brush Saver] load:", module.__name__.split(".")[-1], key, result)
+        return True
     config = _config.get_data()
-    __load(_sculpt_brush, config.get("sculpt", {}))
-    __load(_vertex_brush, config.get("vertex", {}))
+    bpy.ops.object.mode_set(mode="SCULPT")
+    if not __load(_b_sculpt, config.get("sculpt", {})):
+        return False
+    bpy.ops.object.mode_set(mode="VERTEX_PAINT")
+    if not __load(_b_vertex, config.get("vertex", {})):
+        return False
+    bpy.ops.object.mode_set(mode="WEIGHT_PAINT")
+    if not __load(_b_weight, config.get("weight", {})):
+        return False
+    bpy.ops.object.mode_set(mode="TEXTURE_PAINT")
+    if not __load(_b_image, config.get("image", {})):
+        return False
+    return True
 
 
 def save():
@@ -70,42 +86,59 @@ def save():
         return r
     r = False
     config = _config.get_data()
-    r |= __save(_sculpt_brush, config.setdefault("sculpt", {}))
-    r |= __save(_vertex_brush, config.setdefault("vertex", {}))
-    print(r)
+    bpy.ops.object.mode_set(mode="SCULPT")
+    r |= __save(_b_sculpt, config.setdefault("sculpt", {}))
+    bpy.ops.object.mode_set(mode="VERTEX_PAINT")
+    r |= __save(_b_vertex, config.setdefault("vertex", {}))
+    bpy.ops.object.mode_set(mode="WEIGHT_PAINT")
+    r |= __save(_b_weight, config.setdefault("weight", {}))
+    bpy.ops.object.mode_set(mode="TEXTURE_PAINT")
+    r |= __save(_b_image, config.setdefault("image", {}))
     if r:
         _config.save()
+    return True
 
 
 def on_save_post(dummy):
-    run_in_sculpt_mode(save)
+    saveload_procedure(save)
 
 
-def run_in_sculpt_mode(procedure):
-    original_objects = bpy.context.selected_objects.copy()
-    original_active = bpy.context.active_object
+def saveload_procedure(procedure):
+    # 状態を保存
+    original_objects = list(bpy.context.view_layer.objects.selected)
+    original_active = bpy.context.view_layer.objects.active
     original_mode = original_active.mode if original_active else "OBJECT"
-
+    # オブジェクトモードで行うこと
+    if bpy.context.mode != "OBJECT":
+        bpy.ops.object.mode_set(mode="OBJECT")
+    for obj in bpy.data.objects:
+        obj.select_set(False)
+    bpy.context.view_layer.objects.active = None
+    # ダミーオブジェクト作成
     bpy.ops.mesh.primitive_cube_add(size=0.1, location=(0, 0, 0))
     temp_obj = bpy.context.active_object
     temp_obj.name = "ESSENTIAL_BRUSH_SAVER_TEMP"
 
     try:
-        bpy.ops.object.mode_set(mode="SCULPT")
-        procedure()
+        r = procedure()
     finally:
         if original_active:
             for i in original_objects:
                 i.select_set(True)
             bpy.context.view_layer.objects.active = original_active
-        bpy.ops.object.mode_set(mode=original_mode)
+        if bpy.context.mode != original_mode:
+            bpy.ops.object.mode_set(mode=original_mode)
         bpy.data.objects.remove(temp_obj, do_unlink=True)
+        return r
 
 
 def delay_start():
     if on_save_post not in bpy.app.handlers.save_post:
         bpy.app.handlers.save_post.append(on_save_post)
-    run_in_sculpt_mode(load)
+    if not saveload_procedure(load):
+        print("[Essential Brush Saver] Retry loading...")
+        return 1.0
+    print("[Essential Brush Saver] Load finished!")
     return None
 
 
@@ -135,7 +168,7 @@ def register():
     _preference.register()
     try:
         if not bpy.app.timers.is_registered(delay_start):
-            bpy.app.timers.register(delay_start, first_interval=1.0, persistent=True)
+            bpy.app.timers.register(delay_start, first_interval=1.5, persistent=True)
     except Exception as e:
         print(e)
 

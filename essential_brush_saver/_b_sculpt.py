@@ -2,8 +2,6 @@ import bpy
 import os
 relative_asset_path = os.path.join("brushes", "essentials_brushes-mesh_sculpt.blend", "Brush")
 abs_asset_path = os.path.join(bpy.utils.system_resource("DATAFILES"), "assets", "brushes", "essentials_brushes-mesh_sculpt.blend")
-
-
 def is_mode_match(brush): return brush.use_paint_sculpt
 
 

@@ -18,9 +18,11 @@ class EBS_AddonPreferences(bpy.types.AddonPreferences):
     bl_idname = __package__
 
     def draw(self, context):
-        layout = self.layout.row()
-        layout.alignment = "RIGHT"
-        layout.operator(EBS_OT_Reset.bl_idname)
+        r = self.layout.row()
+        r.alignment = "RIGHT"
+        r.operator(EBS_OT_Reset.bl_idname)
+        r = self.layout.row()
+        r.label(text="DataFile Path: " + _config.get_data_path())
 
 
 class EBS_OT_Reset(bpy.types.Operator):
