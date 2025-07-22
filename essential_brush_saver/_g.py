@@ -1,3 +1,4 @@
+import bpy
 import builtins
 log = 1
 

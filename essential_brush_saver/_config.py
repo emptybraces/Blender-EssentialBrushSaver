@@ -2,14 +2,16 @@ import bpy
 import os
 import json
 from mathutils import Vector, Color
-bpy.props.FloatProperty
-
 g_data = {}
 
 
-def get_data_path():
-    config_dir = bpy.utils.user_resource("CONFIG", path="", create=True)
-    return os.path.join(config_dir, "Essential_Brush_Saver.json")
+def get_path_dir():
+    package = __package__ if __package__ != "essential_brush_saver" else "bl_ext.user_default.essential_brush_saver"
+    return bpy.utils.extension_path_user(package, create=True)
+
+
+def get_path_data():
+    return os.path.join(get_path_dir(), "Essential_Brush_Saver.json")
 
 
 def get_data():
@@ -18,7 +20,7 @@ def get_data():
     if g_data:
         return g_data
     try:
-        path = get_data_path()
+        path = get_path_data()
         if os.path.exists(path):
             with open(path, "r", encoding="utf-8") as f:
                 g_data = json.load(f)
@@ -35,7 +37,7 @@ def save():
             return list(obj)
         return str(obj)
     try:
-        path = get_data_path()
+        path = get_path_data()
         with open(path, "w", encoding="utf-8") as f:
             json.dump(g_data, f, default=__encoder, indent=2)
     except (OSError, TypeError) as e:

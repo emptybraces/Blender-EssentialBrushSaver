@@ -9,6 +9,7 @@ from . import (
     _b_weight,
     _b_image,
     _g,
+    test,
 )
 for m in (
     _preference,
@@ -18,6 +19,7 @@ for m in (
     _b_weight,
     _b_image,
     _g,
+    test,
 ):
     importlib.reload(m)
 
@@ -122,12 +124,14 @@ def saveload_procedure(procedure):
     if temp_is_cube:
         temp_obj.name = "ESSENTIAL_BRUSH_SAVER_TEMP"
 
+    r = False
     try:
         r = procedure()
     finally:
         if original_active:
             for i in original_objects:
-                i.select_set(True)
+                if i != None:
+                    i.select_set(True)
             bpy.context.view_layer.objects.active = original_active
         if bpy.context.mode != original_mode:
             bpy.ops.object.mode_set(mode=original_mode)

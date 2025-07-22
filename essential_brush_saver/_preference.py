@@ -2,9 +2,11 @@ import importlib
 import bpy
 from . import (
     _config,
+    _g,
 )
 for m in (
     _config,
+    _g,
 ):
     importlib.reload(m)
 
@@ -18,7 +20,7 @@ class EBS_AddonPreferences(bpy.types.AddonPreferences):
         r.operator(EBS_OT_Reset.bl_idname)
         r = self.layout.row()
         r.alignment = "RIGHT"
-        r.label(text="DataFile Path: " + _config.get_data_path())
+        r.label(text="DataFile Path: " + _config.get_path_data())
         r.operator(EBS_OT_OpenFolder.bl_idname)
 
 
@@ -39,7 +41,7 @@ class EBS_OT_OpenFolder(bpy.types.Operator):
     def execute(self, context):
         import platform
         system = platform.system()
-        path = bpy.utils.user_resource("CONFIG")
+        path = _config.get_path_dir()
         if system == "Windows":
             import os
             os.startfile(path)

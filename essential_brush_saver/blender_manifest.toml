@@ -1,7 +1,7 @@
 schema_version = "1.0.0"
 
 id = "essential_brush_saver"
-version = "1.0.1"
+version = "1.0.3"
 name = "Essential Brush Saver"
 tagline = "Automatically save and load essential brush settings"
 maintainer = "emptybraces <motose6@gmail.com>"
@@ -23,8 +23,8 @@ license = [
   "SPDX:GPL-3.0-or-later",
 ]
 
-# [permissions]
-files = "json file save/load to disk"
+[permissions]
+files = "Save/Load configuration data JSON file to/from disk"
 
 
 # ---------------------------
