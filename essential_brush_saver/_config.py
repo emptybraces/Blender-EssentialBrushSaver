@@ -6,8 +6,11 @@ g_data = {}
 
 
 def get_path_dir():
-    package = __package__ if __package__ != "essential_brush_saver" else "bl_ext.user_default.essential_brush_saver"
-    return bpy.utils.extension_path_user(package, create=True)
+    # エクステンションでの保存先
+    path = __package__ if __package__ != "essential_brush_saver" else "bl_ext.user_default.essential_brush_saver"
+    return bpy.utils.extension_path_user(path, create=True)
+    # アドオンでの保存先
+    # return bpy.utils.user_resource("SCRIPTS", path=f"addons/{__package__}", create=True)
 
 
 def get_path_data():

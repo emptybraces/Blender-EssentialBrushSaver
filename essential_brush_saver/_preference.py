@@ -1,14 +1,16 @@
-import importlib
-import bpy
-from . import (
-    _config,
-    _g,
-)
-for m in (
-    _config,
-    _g,
-):
-    importlib.reload(m)
+if "bpy" in locals():
+    import importlib
+    for m in [
+        _config,
+        _g,
+    ]:
+        importlib.reload(m)
+else:
+    import bpy
+    from . import (
+        _config,
+        _g,
+    )
 
 
 class EBS_AddonPreferences(bpy.types.AddonPreferences):
