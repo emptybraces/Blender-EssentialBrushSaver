@@ -50,7 +50,6 @@ def load():
         # print("[Essential Brush Saver] The following warning logs are required to apply brush settings!")
         config = _config.get_data()
         brush_dict = config.get(brush_category, {})
-        print(brush_category, brush_dict.keys())
         for brush_name in brush_dict.keys():
             result = bpy.ops.brush.asset_activate(
                 asset_library_type="ESSENTIALS",
@@ -69,6 +68,8 @@ def load():
                             continue
                         # b = C.tool_settings.sculpt.brush
                         # {prop.identifier: (getattr(b, prop.identifier), prop.subtype) for prop in b.bl_rna.properties if not prop.is_readonly and prop.type == "POINTER"}
+                        # この処理は無意味。これらのエッセンシャルブラシ上で作ったこれらのデータはローカルのblenderファイルに保存されないし、
+                        # ローカルブラシ上で作ったデータはエッセンシャルブラシ上では参照できない
                         if p.identifier == "texture" or p.identifier == "mask_texture":
                             setattr(brush, p.identifier, bpy.data.textures.get(value))
                             continue
@@ -97,32 +98,36 @@ def load():
 
 
 def save():
-    def __save(module, data):
-        brush_names = []
-        with bpy.data.libraries.load(module.abs_asset_path, link=False, assets_only=True) as (data_from, data_to):
-            brush_names = data_from.brushes[:]
-        r = False
-        for brush_name in brush_names:
-            brush = next((b for b in bpy.data.brushes if b.name == brush_name and module.is_mode_match(b)), None)
-            if brush:
-                r = True
-                brush_data = data.setdefault(brush.name, {})
-                for attr in module.attributes:
-                    if hasattr(brush, attr.split(".")[0]):
-                        brush_data[attr] = getattr_nested(brush, attr)
-                        # print(attr, brush_data[attr])
-                _g.print("[Essential Brush Saver] Save: ", module.__name__.split(".")[-1], brush.name)
-        return r
+    def __save(brush_category, absolute_path, attr_use_mode):
+        config = _config.get_data()
+        brush_dict = config.setdefault(brush_category, {})
+        with bpy.data.libraries.load(absolute_path, link=False, assets_only=True) as (data_from, data_to):
+            editted_brushes = [b for b in bpy.data.brushes if getattr(b, attr_use_mode, False) and b.name in data_from.brushes]
+        for brush in editted_brushes:
+            brush_data = brush_dict.setdefault(brush.name, {})
+            for p in brush.bl_rna.properties:
+                if not p.is_readonly and p.identifier not in ignore_brush_properties:
+                    # この処理は無意味。これらのエッセンシャルブラシ上で作ったこれらのデータはローカルのblenderファイルに保存されないし、
+                    # ローカルブラシ上で作ったデータはエッセンシャルブラシ上では参照できない
+                    if p.identifier == "texture" or p.identifier == "mask_texture" or p.identifier == "paint_curve":
+                        if pointer := getattr(brush, p.identifier):
+                            brush_data[p.identifier] = pointer.name
+                        continue
+                    brush_data[p.identifier] = getattr(brush, p.identifier)
+
+            _g.print("[Essential Brush Saver] Save: ", brush_category, brush.name)
+        return bool(editted_brushes)
+    # --
     r = False
-    config = _config.get_data()
+    path = os.path.join(bpy.utils.system_resource("DATAFILES"), "assets", "brushes")
     bpy.ops.object.mode_set(mode="SCULPT")
-    r |= __save(_b_sculpt, config.setdefault("sculpt", {}))
+    r |= __save("sculpt", os.path.join(path, "essentials_brushes-mesh_sculpt.blend"), "use_paint_sculpt")
     bpy.ops.object.mode_set(mode="VERTEX_PAINT")
-    r |= __save(_b_vertex, config.setdefault("vertex", {}))
+    r |= __save("vertex", os.path.join(path, "essentials_brushes-mesh_vertex.blend"), "use_paint_vertex")
     bpy.ops.object.mode_set(mode="WEIGHT_PAINT")
-    r |= __save(_b_weight, config.setdefault("weight", {}))
+    r |= __save("weight", os.path.join(path, "essentials_brushes-mesh_weight.blend"), "use_paint_weight")
     bpy.ops.object.mode_set(mode="TEXTURE_PAINT")
-    r |= __save(_b_image, config.setdefault("image", {}))
+    r |= __save("image", os.path.join(path, "essentials_brushes-mesh_texture.blend"), "use_paint_image")
     if r:
         _config.save()
     return True
