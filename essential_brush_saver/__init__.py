@@ -38,28 +38,28 @@ bl_info = {
 
 ignore_brush_properties = [
     "name",
+    "tag",
     "use_fake_user",
     "use_extra_user",
     "is_runtime_data",
     "asset_data",
+    "unprojected_radius",  # sizeが上書きされてしまう
 ]
 
 
 def load():
-    def __load(brush_category, relative_path, attr_use_mode):
-        # print("[Essential Brush Saver] The following warning logs are required to apply brush settings!")
+    def __load(brush_category, path, attr_use_mode):
         config = _config.get_data()
         brush_dict = config.get(brush_category, {})
-        for brush_name in brush_dict.keys():
-            result = bpy.ops.brush.asset_activate(
-                asset_library_type="ESSENTIALS",
-                asset_library_identifier="",
-                relative_asset_identifier=os.path.join(relative_path, brush_name))
-            _g.print("[Essential Brush Saver] Load:", brush_category, brush_name, result)
-            if "CANCELLED" in result:
-                return False
-            brush = next((b for b in bpy.data.brushes if b.name == brush_name and getattr(b, attr_use_mode, False)), None)
+        savedata_brush_names = brush_dict.keys()
+        # もし、copyをしない場合、brush_namesにはBrush型が格納される
+        # link=Trueのとき、すでに同名のブラシがあった場合、末尾に数字をつけたコピーが作られる
+        with bpy.data.libraries.load(path, link=True, assets_only=True) as (data_from, data_to):
+            data_to.brushes = list(savedata_brush_names)
+        for brush_name in savedata_brush_names:
+            brush = bpy.data.brushes[brush_name, path]
             if brush:
+                _g.print("[Essential Brush Saver] Load:", brush_category, brush_name)
                 data = brush_dict[brush_name]
                 for p in brush.bl_rna.properties:
                     if not p.is_readonly and p.identifier not in ignore_brush_properties:
@@ -80,31 +80,33 @@ def load():
         return True
     # --
     bpy.ops.object.mode_set(mode="SCULPT")
-    if not __load("sculpt", os.path.join("brushes", "essentials_brushes-mesh_sculpt.blend", "Brush"), "use_paint_sculpt"):
+    path = os.path.join(bpy.utils.system_resource("DATAFILES"), "assets", "brushes")
+    if not __load("sculpt", os.path.join(path, "essentials_brushes-mesh_sculpt.blend"), "use_paint_sculpt"):
         _g.print("[Essential Brush Saver] Failed to load any sculpt brush")
         return False
     bpy.ops.object.mode_set(mode="VERTEX_PAINT")
-    if not __load("vertex", os.path.join("brushes", "essentials_brushes-mesh_vertex.blend", "Brush"), "use_paint_vertex"):
+    if not __load("vertex", os.path.join(path, "essentials_brushes-mesh_vertex.blend"), "use_paint_vertex"):
         _g.print("[Essential Brush Saver] Failed to load any vertex paint brush")
         return False
     bpy.ops.object.mode_set(mode="WEIGHT_PAINT")
-    if not __load("weight", os.path.join("brushes", "essentials_brushes-mesh_weight.blend", "Brush"), "use_paint_weight"):
+    if not __load("weight", os.path.join(path, "essentials_brushes-mesh_weight.blend"), "use_paint_weight"):
         _g.print("[Essential Brush Saver] Failed to load any weight paint brush")
     bpy.ops.object.mode_set(mode="TEXTURE_PAINT")
-    if not __load("image", os.path.join("brushes", "essentials_brushes-mesh_texture.blend", "Brush"), "use_paint_image"):
+    if not __load("image", os.path.join(path, "essentials_brushes-mesh_texture.blend"), "use_paint_image"):
         _g.print("[Essential Brush Saver] Failed to load any image paint brush")
         return False
     return True
 
 
 def save():
-    def __save(brush_category, absolute_path, attr_use_mode):
+    def __save(brush_category, path, attr_use_mode):
         config = _config.get_data()
         brush_dict = config.setdefault(brush_category, {})
-        with bpy.data.libraries.load(absolute_path, link=False, assets_only=True) as (data_from, data_to):
+        with bpy.data.libraries.load(path, link=True, assets_only=True) as (data_from, data_to):
             editted_brushes = [b for b in bpy.data.brushes if getattr(b, attr_use_mode, False) and b.name in data_from.brushes]
         for brush in editted_brushes:
             brush_data = brush_dict.setdefault(brush.name, {})
+            brush_data.clear()
             for p in brush.bl_rna.properties:
                 if not p.is_readonly and p.identifier not in ignore_brush_properties:
                     # この処理は無意味。これらのエッセンシャルブラシ上で作ったこれらのデータはローカルのblenderファイルに保存されないし、
@@ -185,7 +187,7 @@ def delay_start():
         global load_retry_cnt
         load_retry_cnt += 1
         print(f"[Essential Brush Saver] Retry loading...{load_retry_cnt}")
-        if load_retry_cnt == 20:
+        if load_retry_cnt == 10:
             print("[Essential Brush Saver] Too many load failures. Something is wrong, aborting.")
             return None
         return 1.0
@@ -219,7 +221,8 @@ def register():
     _preference.register()
     try:
         if not bpy.app.timers.is_registered(delay_start):
-            bpy.app.timers.register(delay_start, first_interval=1.5, persistent=True)
+            bpy.app.timers.register(delay_start, first_interval=0.1, persistent=True)
+            # bpy.app.timers.register(delay_start, first_interval=1.0, persistent=True)
     except Exception as e:
         print(e)
 
