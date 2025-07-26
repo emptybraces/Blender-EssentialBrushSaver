@@ -37,7 +37,7 @@ class EBS_OT_Reset(bpy.types.Operator):
 
 
 class EBS_OT_OpenFolder(bpy.types.Operator):
-    bl_idname = "ebs.openfolder"
+    bl_idname = "ebs.open_folder"
     bl_label = "Open Folder"
 
     def execute(self, context):

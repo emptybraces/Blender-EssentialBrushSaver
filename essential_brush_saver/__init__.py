@@ -4,10 +4,6 @@ if "bpy" in locals():
     for m in [
         _preference,
         _config,
-        _b_sculpt,
-        _b_vertex,
-        _b_weight,
-        _b_image,
         _g,
     ]:
         importlib.reload(m)
@@ -16,17 +12,13 @@ else:
     from . import (
         _preference,
         _config,
-        _b_sculpt,
-        _b_vertex,
-        _b_weight,
-        _b_image,
         _g,
     )
 
 bl_info = {
     "name": "Essential Brush Saver",
     "author": "emptybraces",
-    "version": (1, 0, 0),
+    "version": (1, 1, 0),
     "blender": (4, 3, 0),
     "location": "",
     "description": "Automatically save and load essential brush settings",
@@ -62,7 +54,7 @@ def load():
                 _g.print("[Essential Brush Saver] Load:", brush_category, brush_name)
                 data = brush_dict[brush_name]
                 for p in brush.bl_rna.properties:
-                    if not p.is_readonly and p.identifier not in ignore_brush_properties:
+                    if not p.is_readonly:
                         # POINTERがNoneの値は書き込みしないようにしてる
                         if (value := data.get(p.identifier, None)) is None:
                             continue
