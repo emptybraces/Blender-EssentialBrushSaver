@@ -18,7 +18,7 @@ else:
 bl_info = {
     "name": "Essential Brush Saver",
     "author": "emptybraces",
-    "version": (1, 1, 0),
+    "version": (1, 1, 2),
     "blender": (4, 3, 0),
     "location": "",
     "description": "Automatically save and load essential brush settings",
@@ -44,8 +44,10 @@ def load():
         config = _config.get_data()
         brush_dict = config.get(brush_category, {})
         savedata_brush_names = brush_dict.keys()
-        # もし、copyをしない場合、brush_namesにはBrush型が格納される
-        # link=Trueのとき、すでに同名のブラシがあった場合、末尾に数字をつけたコピーが作られる
+        if not savedata_brush_names:
+            return True
+        # - もしcopyをdata_toに渡さない場合、savedata_brush_namesにはBrush型が格納される
+        # - link=Falseのとき、すでに同名のブラシがあった場合、末尾に数字をつけたコピーインスタンスが作られる
         with bpy.data.libraries.load(path, link=True, assets_only=True) as (data_from, data_to):
             data_to.brushes = list(savedata_brush_names)
         for brush_name in savedata_brush_names:
@@ -55,13 +57,12 @@ def load():
                 data = brush_dict[brush_name]
                 for p in brush.bl_rna.properties:
                     if not p.is_readonly:
-                        # POINTERがNoneの値は書き込みしないようにしてる
                         if (value := data.get(p.identifier, None)) is None:
                             continue
                         # b = C.tool_settings.sculpt.brush
                         # {prop.identifier: (getattr(b, prop.identifier), prop.subtype) for prop in b.bl_rna.properties if not prop.is_readonly and prop.type == "POINTER"}
-                        # この処理は無意味。これらのエッセンシャルブラシ上で作ったこれらのデータはローカルのblenderファイルに保存されないし、
-                        # ローカルブラシ上で作ったデータはエッセンシャルブラシ上では参照できない
+                        # この処理は無意味だけどやっておく。これらのエッセンシャルブラシ上で作ったこれらのデータはローカルのblenderファイルに保存されないし、
+                        # ローカルブラシ上で作ったデータはエッセンシャルブラシ上では参照できない。
                         if p.identifier == "texture" or p.identifier == "mask_texture":
                             setattr(brush, p.identifier, bpy.data.textures.get(value))
                             continue
@@ -71,6 +72,7 @@ def load():
                         setattr(brush, p.identifier, value)
         return True
     # --
+    # モード変えないと一部プロパティが"DEFAULT"になってしまったり、enumが参照できなくなったりする
     bpy.ops.object.mode_set(mode="SCULPT")
     path = os.path.join(bpy.utils.system_resource("DATAFILES"), "assets", "brushes")
     if not __load("sculpt", os.path.join(path, "essentials_brushes-mesh_sculpt.blend"), "use_paint_sculpt"):
@@ -101,8 +103,8 @@ def save():
             brush_data.clear()
             for p in brush.bl_rna.properties:
                 if not p.is_readonly and p.identifier not in ignore_brush_properties:
-                    # この処理は無意味。これらのエッセンシャルブラシ上で作ったこれらのデータはローカルのblenderファイルに保存されないし、
-                    # ローカルブラシ上で作ったデータはエッセンシャルブラシ上では参照できない
+                    # この処理は無意味だけどやっておく。エッセンシャルブラシ上で作ったこれらのデータはローカルのblenderファイルに保存されないし、
+                    # ローカルブラシ上で作ったデータはエッセンシャルブラシ上では参照できない。
                     if p.identifier == "texture" or p.identifier == "mask_texture" or p.identifier == "paint_curve":
                         if pointer := getattr(brush, p.identifier):
                             brush_data[p.identifier] = pointer.name
@@ -114,6 +116,7 @@ def save():
     # --
     r = False
     path = os.path.join(bpy.utils.system_resource("DATAFILES"), "assets", "brushes")
+    # モード変えないと一部プロパティが"DEFAULT"になってしまったり、enumが参照できなくなったりする
     bpy.ops.object.mode_set(mode="SCULPT")
     r |= __save("sculpt", os.path.join(path, "essentials_brushes-mesh_sculpt.blend"), "use_paint_sculpt")
     bpy.ops.object.mode_set(mode="VERTEX_PAINT")
@@ -136,6 +139,8 @@ def saveload_procedure(procedure):
     original_objects = [i for i in bpy.context.view_layer.objects.selected if i != None]
     original_active = bpy.context.view_layer.objects.active
     original_mode = original_active.mode if original_active else "OBJECT"
+    # モードが切り替わるとdyntopoがFalseになってしまうのでその前に確認する
+    check_start_dyntopo()
     # オブジェクトモードで行うこと
     if bpy.context.mode != "OBJECT":
         bpy.ops.object.mode_set(mode="OBJECT")
@@ -166,6 +171,8 @@ def saveload_procedure(procedure):
             bpy.ops.object.mode_set(mode=original_mode)
         if temp_is_cube:
             bpy.data.objects.remove(temp_obj, do_unlink=True)
+        # dyntopoを元に戻す
+        check_end_dyntopo()
         return r
 
 
@@ -187,26 +194,20 @@ def delay_start():
     return None
 
 
-def setattr_nested(obj, attr_chain, value):
-    attrs = attr_chain.split(".")
-    for attr in attrs[:-1]:
-        if not hasattr(obj, attr):
-            return
-        obj = getattr(obj, attr)
-        if obj is None:
-            return
-    setattr(obj, attrs[-1], value)
+is_dyntopo = False
 
 
-def getattr_nested(obj, attr_chain, default=None):
-    attrs = attr_chain.split(".")
-    for attr in attrs:
-        if not hasattr(obj, attr):
-            return default
-        obj = getattr(obj, attr)
-        if obj is None:
-            return default
-    return obj
+def check_start_dyntopo():
+    obj = bpy.context.active_object
+    global is_dyntopo
+    is_dyntopo = obj.mode == "SCULPT" and bpy.context.sculpt_object.use_dynamic_topology_sculpting
+
+
+def check_end_dyntopo():
+    global is_dyntopo
+    if is_dyntopo == True:
+        bpy.ops.sculpt.dynamic_topology_toggle()
+    is_dyntopo = False
 
 
 def register():
@@ -214,7 +215,6 @@ def register():
     try:
         if not bpy.app.timers.is_registered(delay_start):
             bpy.app.timers.register(delay_start, first_interval=0.1, persistent=True)
-            # bpy.app.timers.register(delay_start, first_interval=1.0, persistent=True)
     except Exception as e:
         print(e)
 
