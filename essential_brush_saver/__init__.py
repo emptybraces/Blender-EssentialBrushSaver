@@ -18,7 +18,7 @@ else:
 bl_info = {
     "name": "Essential Brush Saver",
     "author": "emptybraces",
-    "version": (1, 1, 2),
+    "version": (1, 1, 3),
     "blender": (4, 3, 0),
     "location": "",
     "description": "Automatically save and load essential brush settings",
@@ -198,14 +198,15 @@ is_dyntopo = False
 
 
 def check_start_dyntopo():
-    obj = bpy.context.active_object
     global is_dyntopo
-    is_dyntopo = obj.mode == "SCULPT" and bpy.context.sculpt_object.use_dynamic_topology_sculpting
+    obj = bpy.context.active_object
+    is_dyntopo = obj and obj.mode == "SCULPT" and bpy.context.sculpt_object.use_dynamic_topology_sculpting
 
 
 def check_end_dyntopo():
     global is_dyntopo
-    if is_dyntopo == True:
+    obj = bpy.context.active_object
+    if obj and obj.mode == "SCULPT" and is_dyntopo and not bpy.context.sculpt_object.use_dynamic_topology_sculpting:
         bpy.ops.sculpt.dynamic_topology_toggle()
     is_dyntopo = False
 

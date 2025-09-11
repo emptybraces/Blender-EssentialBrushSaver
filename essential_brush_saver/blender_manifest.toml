@@ -1,7 +1,7 @@
 schema_version = "1.0.0"
 
 id = "essential_brush_saver"
-version = "1.1.2"
+version = "1.1.3"
 name = "Essential Brush Saver"
 tagline = "Automatically save and load essential brush settings"
 maintainer = "emptybraces <motose6@gmail.com>"
@@ -28,6 +28,9 @@ files = "Save/Load configuration data JSON file to/from disk"
 
 
 # ---------------------------
+# v1.1.3
+# - [Fix] オブジェクトを何も選択してないときに保存するとエラーが発生し処理が中断される。
+# - [Fix] Dyntopoのリストアが正常に働かないケースがある。
 # v1.1.2
 # - プリファレンスからブラシデータを個別削除できるようにした。
 # - [Fix] スカルプトモード時にDyntopoにチェックが入っている状態で保存したりロードすると必ずチェックが外れる。
